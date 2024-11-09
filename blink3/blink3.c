@@ -7,7 +7,7 @@ int main()
     stdio_init_all();
 
     while (true) {
-        printf("Hello, world2!\n");
+        printf("Hello, Tsukasa2!\n");
         sleep_ms(1000);
     }
 }
