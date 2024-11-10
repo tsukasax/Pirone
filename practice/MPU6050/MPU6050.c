@@ -3,7 +3,12 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 
+#define I2C_SDA_PIN 12
+#define I2C_SCL_PIN 13
+
+
 static int addr = 0x68;
+
 
 static void mpu6050_init() {
     uint8_t buf[] = {0x6B, 0x80}; // MPU6050をリセット
@@ -43,13 +48,13 @@ static void mpu6050_read_raw(int16_t accel[3], int16_t gyro[3]) {
 int main() {
     stdio_init_all();
     sleep_ms(1000);
-    printf("Hello, MPU6050! Reading raw data from registers...\n");
+    // printf("Hello, MPU6050! Reading raw data from registers...\n");
 
     i2c_init(i2c_default, 400 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    gpio_set_function(I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA_PIN);
+    gpio_pull_up(I2C_SCL_PIN);
     
     mpu6050_init();
 
@@ -57,7 +62,7 @@ int main() {
     float Ax, Ay, Az, Gx, Gy, Gz;
 
     while (1) {
-        int t_start = time_us_32();
+        // int t_start = time_us_32();
         mpu6050_read_raw(acceleration, gyro);
         
         Ax = acceleration[0] / 16384.0;
@@ -67,11 +72,14 @@ int main() {
         Gy = gyro[1] / 131.0;
         Gz = gyro[2] / 131.0;
 
-        // printf("AX = %.2f, AY = %.2f, AZ = %.2f, GX = %.2f, GY = %.2f, GZ = %.2f\n",
-            // Ax, Ay, Az, Gx, Gy, Gz);
+        // printf("%d",acceleration[2]);
+        printf("Ax:%.2f, Ay:%.2f, Az:%.2f\n",
+            Ax, Ay, Az);
+        // printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n",
+        //     Ax, Ay, Az, Gx, Gy, Gz);
 
-        printf("Time = %d\n", time_us_32() - t_start);
+        // printf("Time = %d\n", time_us_32() - t_start);
 
-        sleep_ms(1000);
+        sleep_ms(100);
     }
 }
