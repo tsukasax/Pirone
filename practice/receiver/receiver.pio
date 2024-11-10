@@ -1,0 +1,45 @@
+.program receiver
+
+.wrap_target
+
+start:
+    pull noblock    ; TXFIFOへ値が無ければXレジスタの値をosrへ代入
+    mov x, osr      ; osrの値をXレジスタに代入（これ以降の基準値として待避）
+    mov y, osr      ; osrの値をYレジスタに代入（カウント用変数として使用）
+    wait 0 pin 0
+    wait 1 pin 0
+loop:
+    jmp pin countdown   ; 1cycle
+    in y, 16            ; pinがLowになればYレジスタをisrへ16ビット分代入、即autopush
+    ;irq 0 rel          ; 自身のSM番号の割り込みを発生
+    jmp start
+countdown:
+    jmp y-- loop        ; 1cycle(全2cycle)
+
+.wrap
+
+
+% c-sdk {
+void receiver_program_init(PIO pio, uint sm, uint offset, uint pin) {
+   pio_gpio_init(pio, pin);
+   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
+   gpio_pull_up(pin);
+   pio_sm_config c = receiver_program_get_default_config(offset);
+   
+   sm_config_set_jmp_pin(&c, pin);
+
+   // wait命令でin_pinsの指定が必要
+   sm_config_set_in_pins(&c, pin);
+
+   // 第2引数は、true to shift ISR to right, false to shift ISR to left（今回は左シフト）
+   sm_config_set_in_shift(&c, false, true, 16);
+   sm_config_set_clkdiv(&c, 62.5);      // 2MHz
+
+   pio_sm_init(pio, sm, offset, &c);
+
+   // パルス幅検出用カウントダウン初期値を指定し送信FIFOへ送信
+   pio_sm_put_blocking(pio, sm, 5000);  // プロポの信号範囲が1〜2msとなるので、1usのループとして5,000(5ms)とする
+
+   pio_sm_set_enabled(pio, sm, true);
+}
+%}
