@@ -1,7 +1,7 @@
 .program receiver
 
 .wrap_target
-
+    irq clear 0 rel
 start:
     pull noblock    ; TXFIFOへ値が無ければXレジスタの値をosrへ代入
     mov x, osr      ; osrの値をXレジスタに代入（これ以降の基準値として待避）
@@ -11,7 +11,7 @@ start:
 loop:
     jmp pin countdown   ; 1cycle
     in y, 16            ; pinがLowになればYレジスタをisrへ16ビット分代入、即autopush
-    ;irq 0 rel          ; 自身のSM番号の割り込みを発生
+    irq 0 rel          ; 自身のSM番号の割り込みを発生
     jmp start
 countdown:
     jmp y-- loop        ; 1cycle(全2cycle)
@@ -38,7 +38,7 @@ void receiver_program_init(PIO pio, uint sm, uint offset, uint pin) {
    pio_sm_init(pio, sm, offset, &c);
 
    // パルス幅検出用カウントダウン初期値を指定し送信FIFOへ送信
-   pio_sm_put_blocking(pio, sm, 5000);  // プロポの信号範囲が1〜2msとなるので、1usのループとして5,000(5ms)とする
+   pio_sm_put(pio, sm, 5000);  // プロポの信号範囲が1〜2msとなるので、1usのループとして5,000(5ms)とする
 
    pio_sm_set_enabled(pio, sm, true);
 }
