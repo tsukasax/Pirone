@@ -23,11 +23,11 @@ countdown:
     pull noblock
     mov x, osr
     mov y, x
-    set pins, 1   ; Turn LED on
+    set pins, 0   ; Turn LED off
 lp1:
     jmp y-- lp1   ; Delay for (x + 1) cycles, x is a 32 bit number
     mov y, x
-    set pins, 0   ; Turn LED off
+    set pins, 1   ; Turn LED on
 lp2:
     jmp y-- lp2   ; Delay for the same number of cycles again
 .wrap             ; Blink forever!
@@ -53,8 +53,6 @@ void receiver_program_init(PIO pio, uint sm, uint offset, uint pin) {
 
    // パルス幅検出用カウントダウン初期値を指定し送信FIFOへ送信
    pio_sm_put(pio, sm, 5000);  // プロポの信号範囲が1〜2msとなるので、1usのループとして5,000(5ms)とする
-
-   //pio_sm_set_enabled(pio, sm, true);
 }
 
 void blink_program_init(PIO pio, uint sm, uint offset, uint pin) {
@@ -63,6 +61,5 @@ void blink_program_init(PIO pio, uint sm, uint offset, uint pin) {
    pio_sm_config c = blink_program_get_default_config(offset);
    sm_config_set_set_pins(&c, pin, 1);
    pio_sm_init(pio, sm, offset, &c);
-   pio_sm_set_enabled(pio, sm, true);
 }
 %}

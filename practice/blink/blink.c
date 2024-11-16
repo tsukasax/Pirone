@@ -1,6 +1,6 @@
 #include "pico/stdlib.h"
 
-#define LED_DELAY_MS 100
+#define LED_DELAY_MS 1000
 
 int main()
 {
