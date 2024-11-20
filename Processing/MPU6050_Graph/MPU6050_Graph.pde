@@ -36,14 +36,14 @@ void setup() {
   smooth(4);
   
   myPort = new Serial(this, com_port, baudrate);
+  Accel_Graph = new graphMonitor(100, 50, 1000, 300);
+  Gyro_Graph = new graphMonitor(100, 450, 1000, 300);
   
   myFont_1 = createFont(Font_Name_1, 30);
   myFont_2 = createFont(Font_Name_2, 30);
   myFont_3 = createFont(Font_Name_3, 30);
   myFont_4 = createFont(Font_Name_4, 30);
-  
-  Accel_Graph = new graphMonitor(100, 50, 1000, 300);
-  Gyro_Graph = new graphMonitor(100, 450, 1000, 300);
+   
 }
 
 
