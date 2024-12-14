@@ -89,7 +89,7 @@ class graphMonitor {
       // グラフ種別による各変数の設定
       if (graph_name == "accel") {
         text_title = "Acceleration(加速度)信号";
-        maxRange = 4;
+        maxRange = 10000;
         value_1 = ax_raw;
         value_2 = ay_raw;
         value_3 = az_raw;
@@ -98,10 +98,10 @@ class graphMonitor {
         name_3 = "az";
         x_text_posi = 1200;
         offset = -10;
-        y_offset = 0;
+        y_offset = 75;
       }else{
         text_title = "Gyro(角速度)信号";
-        maxRange = 600;
+        maxRange = 80000;
         value_1 = gx_raw;
         value_2 = gy_raw;
         value_3 = gz_raw;
