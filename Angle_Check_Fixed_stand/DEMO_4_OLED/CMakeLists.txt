@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(DEMO_4_OLED DEMO_4_OLED.cpp)
+add_executable(DEMO_4_OLED DEMO_4_OLED.cpp )
 
 # OLED追加
 add_subdirectory(pico-ssd1306)
