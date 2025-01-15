@@ -22,8 +22,14 @@ String Font_Name_3 = "HGP創英角ｺﾞｼｯｸUB";
 String Font_Name_4 = "Yu Gothic UI Bold";
 String com_port = "COM6";
 int baudrate = 115200;
-int FRATE = 50;
+int FRATE = 60;
 
+// 一時停止ボタン
+int circleX = 1230, circleY = 550;  // Position of circle button
+int circleSize = 100;   // Diameter of circle
+color circleOn = color(255, 51, 51);
+color circleOff = color(255, 255, 51);
+boolean circleToggle = false;
 
 
 void setup() {
@@ -32,7 +38,7 @@ void setup() {
   smooth(4);
   
   myPort = new Serial(this, com_port, baudrate);
-  
+
   myFont_1 = createFont(Font_Name_1, 30);
   myFont_2 = createFont(Font_Name_2, 30);
   myFont_3 = createFont(Font_Name_3, 30);
@@ -45,6 +51,16 @@ void setup() {
 void draw() {
   background(#015F0D);
   ReceiverGraph.graphDraw(serial_data[0], serial_data[1], serial_data[2], serial_data[3]);
+  
+  // 一時停止ボタン（プログラム動作中は「停止」のみ連続表示）
+  fill(circleOff);
+  stroke(0);
+  ellipse(circleX, circleY, circleSize, circleSize);
+  textFont(myFont_1);
+  textSize(30);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  text("停止",circleX, circleY);
 }
 
 class graphMonitor {
@@ -130,7 +146,7 @@ class graphMonitor {
       // 取得データのライン描画
       translate(0, Y_LENGTH);
       scale(1, -1);
-      strokeWeight(2);
+      strokeWeight(1);
       
       for (int i = 0; i < X_LENGTH - 1; i++) {
         // motor1のライン
@@ -194,5 +210,39 @@ void serialEvent(Serial myPort) {
   if (serial_raw != null) {
     serial_raw = trim(serial_raw);
     serial_data = float(split(serial_raw, ','));
+  }
+}
+
+// ******************
+// 一時停止ボタン
+// ******************
+void mousePressed() {
+  if (overCircle(circleX, circleY, circleSize)) {
+    if (circleToggle) {
+      circleToggle = false;
+      loop();
+    }else {
+      circleToggle = true;
+      // 再開ボタンを表示してnoLoopで待機状態とする
+      fill(circleOn);
+      stroke(0);
+      ellipse(circleX, circleY, circleSize, circleSize);
+      textFont(myFont_1);
+      textSize(30);
+      fill(255);
+      textAlign(CENTER, CENTER);
+      text("再開",circleX, circleY);
+      noLoop();
+    }
+  }
+}
+
+boolean overCircle(int x, int y, int diameter) {
+  float disX = x - mouseX;
+  float disY = y - mouseY;
+  if (sqrt(sq(disX) + sq(disY)) < diameter/2 ) {
+    return true;
+  } else {
+    return false;
   }
 }
