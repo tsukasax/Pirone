@@ -1,6 +1,6 @@
 #include "receiver.h"
 
-uint32_t receiver_pulse[4] = {1500, 1500, 1500, 1500};
+uint32_t receiver_pulse[4] = {1500, 1500, 1000, 1500};
 
 /*******************
 プロポから受信発生の割り込み処理

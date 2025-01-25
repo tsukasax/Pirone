@@ -1,7 +1,7 @@
 import processing.serial.*;
 
 // シリアル通信用変数定義
-float ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw;
+float lowpass_x, lowpass_y, lowpass_z, target_x, target_y, target_z;
 
 // 画面描画用変数定義
 PFont myFont_1, myFont_2, myFont_3, myFont_4;
@@ -50,8 +50,8 @@ void setup() {
 void draw() {
   background(#015F0D);
   
-  Accel_Graph.graphDraw(ax_raw, ay_raw, az_raw, "accel");
-  Gyro_Graph.graphDraw(gx_raw, gy_raw, gz_raw, "gyro");
+  Accel_Graph.graphDraw(lowpass_x, lowpass_y, lowpass_z, "accel");
+  Gyro_Graph.graphDraw(target_x, target_y, target_z, "gyro");
 }
 
 class graphMonitor {
@@ -88,27 +88,27 @@ class graphMonitor {
       
       // グラフ種別による各変数の設定
       if (graph_name == "accel") {
-        text_title = "Acceleration(加速度)信号";
-        maxRange = 10000;
-        value_1 = ax_raw;
-        value_2 = ay_raw;
-        value_3 = az_raw;
-        name_1 = "ax";
-        name_2 = "ay";
-        name_3 = "az";
-        x_text_posi = 1200;
+        text_title = "Lowpassフィルタ値";
+        maxRange = 200;
+        value_1 = lowpass_x;
+        value_2 = lowpass_y;
+        value_3 = lowpass_z;
+        name_1 = "lowpass_x";
+        name_2 = "lowpass_y";
+        name_3 = "lowpass_z";
+        x_text_posi = 1220;
         offset = -10;
         y_offset = 75;
       }else{
-        text_title = "Gyro(角速度)信号";
-        maxRange = 100;
-        value_1 = gx_raw;
-        value_2 = gy_raw;
-        value_3 = gz_raw;
-        name_1 = "gx";
-        name_2 = "gy";
-        name_3 = "gz";
-        x_text_posi = 1180;
+        text_title = "目標値";
+        maxRange = 500;
+        value_1 = target_x;
+        value_2 = target_y;
+        value_3 = target_z;
+        name_1 = "target_x";
+        name_2 = "target_y";
+        name_3 = "target_z";
+        x_text_posi = 1200;
         offset  = 10;
         y_offset = 75;
       }
@@ -134,7 +134,7 @@ class graphMonitor {
       text(text_title, 20, -5);
       
       // チーム名表示
-      if (graph_name == "accel") {
+      if (graph_name == "lopass") {
         textFont(myFont_2);
         textSize(20);
         text(text_team_name,1050,-5);
@@ -151,7 +151,7 @@ class graphMonitor {
       text(nf((maxRange / 4), 0, 0), -5, Y_LENGTH / 4);
 
       // X軸目盛値その他表示
-      if (graph_name == "gyro") {
+      if (graph_name == "target") {
         textFont(myFont_3);
         textSize(18);
         textAlign(LEFT);
@@ -222,11 +222,11 @@ void serialEvent(Serial myPort) {
   if (str_data != null){
     str_data = trim(str_data);
     temp = split(str_data,",");
-    ax_raw = float(temp[0]);
-    ay_raw = float(temp[1]);
-    az_raw = float(temp[2]);
-    gx_raw = float(temp[3]);
-    gy_raw = float(temp[4]);
-    gz_raw = float(temp[5]);
+    lowpass_x = float(temp[0]);
+    lowpass_y = float(temp[1]);
+    lowpass_z = float(temp[2]);
+    target_x = float(temp[3]);
+    target_y = float(temp[4]);
+    target_z = float(temp[5]);
   }
 }

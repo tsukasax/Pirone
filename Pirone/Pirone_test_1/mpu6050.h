@@ -24,11 +24,12 @@
 #define GYRO_LSB 65.5                   // ±500°/s時
 #define ACCEL_LSB 4096                  // ±8g時
 #define PI 3.14
+
 #define DIFF_ANGLE_MIN -20              // 目標角度 最小
 #define DIFF_ANGLE_MAX 20               // 目標角度 最大
-#define DIFF_ANGLE_COEFFICIENT 20       // 目標値 係数
-#define PID_TOLERANCE 300               // PID制御範囲の許容
-#define ERROR_TOLERANCE 2               // 誤差範囲の許容
+#define DIFF_ANGLE_COEFFICIENT 15       // 目標値 係数
+#define PID_TOLERANCE 200               // PID制御範囲の許容
+#define ERROR_TOLERANCE 400               // 誤差範囲の許容
 
 extern uint32_t receiver_pulse[4];
 extern bool rc_connect_flag;

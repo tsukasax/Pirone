@@ -1,7 +1,7 @@
 import processing.serial.*;
 
 // シリアル通信用変数定義
-float ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw;
+float errors_roll, errors_pitch, errors_yaw, errorsum_roll, errorsum_pitch, errorsum_yaw;
 
 // 画面描画用変数定義
 PFont myFont_1, myFont_2, myFont_3, myFont_4;
@@ -24,10 +24,17 @@ String com_port = "COM6";
 int baudrate = 115200;
 int FRATE = 50;
 
+// 一時停止ボタン
+int circleX = 1230, circleY = 700;  // Position of circle button
+int circleSize = 100;   // Diameter of circle
+color circleOn = color(255, 51, 51);
+color circleOff = color(255, 255, 51);
+boolean circleToggle = false;
+
 // クラスのインスタンス
 Serial myPort;
-graphMonitor Accel_Graph;
-graphMonitor Gyro_Graph;
+graphMonitor errors_Graph;
+graphMonitor errorsum_Graph;
 
 
 void setup() {
@@ -36,8 +43,8 @@ void setup() {
   smooth(4);
   
   myPort = new Serial(this, com_port, baudrate);
-  Accel_Graph = new graphMonitor(100, 50, 1000, 300);
-  Gyro_Graph = new graphMonitor(100, 450, 1000, 300);
+  errors_Graph = new graphMonitor(100, 50, 1000, 300);
+  errorsum_Graph = new graphMonitor(100, 450, 1000, 300);
   
   myFont_1 = createFont(Font_Name_1, 30);
   myFont_2 = createFont(Font_Name_2, 30);
@@ -50,8 +57,18 @@ void setup() {
 void draw() {
   background(#015F0D);
   
-  Accel_Graph.graphDraw(ax_raw, ay_raw, az_raw, "accel");
-  Gyro_Graph.graphDraw(gx_raw, gy_raw, gz_raw, "gyro");
+  errors_Graph.graphDraw(errors_roll, errors_pitch, errors_yaw, "errors");
+  errorsum_Graph.graphDraw(errorsum_roll, errorsum_pitch, errorsum_yaw, "errorsum");
+  
+  // 一時停止ボタン（プログラム動作中は「停止」のみ連続表示）
+  fill(circleOff);
+  stroke(0);
+  ellipse(circleX, circleY, circleSize, circleSize);
+  textFont(myFont_1);
+  textSize(30);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  text("停止",circleX, circleY);
 }
 
 class graphMonitor {
@@ -87,29 +104,29 @@ class graphMonitor {
       pushMatrix();
       
       // グラフ種別による各変数の設定
-      if (graph_name == "accel") {
-        text_title = "Acceleration(加速度)信号";
-        maxRange = 10000;
-        value_1 = ax_raw;
-        value_2 = ay_raw;
-        value_3 = az_raw;
-        name_1 = "ax";
-        name_2 = "ay";
-        name_3 = "az";
-        x_text_posi = 1200;
-        offset = -10;
+      if (graph_name == "errors") {
+        text_title = "errors（比例）";
+        maxRange = 400;
+        value_1 = errors_roll;
+        value_2 = errors_pitch;
+        value_3 = errors_yaw;
+        name_1 = "roll";
+        name_2 = "pitch";
+        name_3 = "yaw";
+        x_text_posi = 1210;
+        offset = 0;
         y_offset = 75;
       }else{
-        text_title = "Gyro(角速度)信号";
-        maxRange = 100;
-        value_1 = gx_raw;
-        value_2 = gy_raw;
-        value_3 = gz_raw;
-        name_1 = "gx";
-        name_2 = "gy";
-        name_3 = "gz";
-        x_text_posi = 1180;
-        offset  = 10;
+        text_title = "error_sum（積分）";
+        maxRange = 20000;
+        value_1 = errorsum_roll;
+        value_2 = errorsum_pitch;
+        value_3 = errorsum_yaw;
+        name_1 = "roll";
+        name_2 = "pitch";
+        name_3 = "yaw";
+        x_text_posi = 1210;
+        offset  = 0;
         y_offset = 75;
       }
       
@@ -134,7 +151,7 @@ class graphMonitor {
       text(text_title, 20, -5);
       
       // チーム名表示
-      if (graph_name == "accel") {
+      if (graph_name == "Errors") {
         textFont(myFont_2);
         textSize(20);
         text(text_team_name,1050,-5);
@@ -151,7 +168,7 @@ class graphMonitor {
       text(nf((maxRange / 4), 0, 0), -5, Y_LENGTH / 4);
 
       // X軸目盛値その他表示
-      if (graph_name == "gyro") {
+      if (graph_name == "ErrorSUM") {
         textFont(myFont_3);
         textSize(18);
         textAlign(LEFT);
@@ -222,11 +239,45 @@ void serialEvent(Serial myPort) {
   if (str_data != null){
     str_data = trim(str_data);
     temp = split(str_data,",");
-    ax_raw = float(temp[0]);
-    ay_raw = float(temp[1]);
-    az_raw = float(temp[2]);
-    gx_raw = float(temp[3]);
-    gy_raw = float(temp[4]);
-    gz_raw = float(temp[5]);
+    errors_roll = float(temp[0]);
+    errors_pitch = float(temp[1]);
+    errors_yaw = float(temp[2]);
+    errorsum_roll = float(temp[3]);
+    errorsum_pitch = float(temp[4]);
+    errorsum_yaw = float(temp[5]);
+  }
+}
+
+// ******************
+// 一時停止ボタン
+// ******************
+void mousePressed() {
+  if (overCircle(circleX, circleY, circleSize)) {
+    if (circleToggle) {
+      circleToggle = false;
+      loop();
+    }else {
+      circleToggle = true;
+      // 再開ボタンを表示してnoLoopで待機状態とする
+      fill(circleOn);
+      stroke(0);
+      ellipse(circleX, circleY, circleSize, circleSize);
+      textFont(myFont_1);
+      textSize(30);
+      fill(255);
+      textAlign(CENTER, CENTER);
+      text("再開",circleX, circleY);
+      noLoop();
+    }
+  }
+}
+
+boolean overCircle(int x, int y, int diameter) {
+  float disX = x - mouseX;
+  float disY = y - mouseY;
+  if (sqrt(sq(disX) + sq(disY)) < diameter/2 ) {
+    return true;
+  } else {
+    return false;
   }
 }

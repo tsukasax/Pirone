@@ -3,9 +3,9 @@
 float angle_gyro[3] = {0, 0, 0};
 float angle_accel[3] = {0, 0, 0};
 float target_value[4] = {0, 0, 0, 0};
-float Kp[4] = {2.0, 1.5, 0, 0.8};
-float Ki[4] = {0.05, 0.04, 0, 0.02};
-float Kd[4] = {3, 5, 0, 0};
+float Kp[4] = {1.3, 1.3, 0, 4.0};
+float Ki[4] = {0.02, 0.02, 0, 0.02};
+float Kd[4] = {18, 18, 0, 0};
 float pid[4] = {0, 0, 0, 0};
 float throttle = 0;
 float errors[4] = {0, 0, 0, 0};
@@ -15,6 +15,7 @@ float before_error[4] = {0, 0, 0, 0};
 float complement_angle[4] = {0, 0, 0, 0};
 float lowpass_angle[4] = {0, 0, 0, 0};
 long gyro_offset[3] = {0, 0, 0};
+long accel_offset[3] = {0, 0, 0};
 int mpu_accel[3] = {0, 0, 0};
 int mpu_gyro[3] = {0, 0, 0};
 int mpu_accel_sum[3] = {0, 0, 0,};
@@ -79,6 +80,9 @@ void mpu6050_calibrate() {
     gyro_offset[X] = 0;
     gyro_offset[Y] = 0;
     gyro_offset[Z] = 0;
+    // accel_offset[X] = 0;
+    // accel_offset[Y] = 0;
+    // accel_offset[Z] = 0;
 
     for (int i = 0; i < CALIBRATION_SAMPLE; i++) {
         mpu6050_read_raw(acceleration, gyro);
@@ -86,12 +90,19 @@ void mpu6050_calibrate() {
         gyro_offset[X] += gyro[X];
         gyro_offset[Y] += gyro[Y];
         gyro_offset[Z] += gyro[Z];
+        // accel_offset[X] += acceleration[X];
+        // accel_offset[Y] += acceleration[Y];
+        // accel_offset[Z] += acceleration[Z];
 
         sleep_ms(3);
     }
     gyro_offset[X] /= CALIBRATION_SAMPLE;
     gyro_offset[Y] /= CALIBRATION_SAMPLE;
     gyro_offset[Z] /= CALIBRATION_SAMPLE;
+    // accel_offset[X] /= CALIBRATION_SAMPLE;
+    // accel_offset[Y] /= CALIBRATION_SAMPLE;
+    // accel_offset[Z] /= CALIBRATION_SAMPLE;
+    // accel_offset[Z] -= 4096;
 
     // printf("MPU6050キャリブレーション 終了\n\n");
     // printf("X: %d, Y: %d, Z: %d\n", gyro_offset[X], gyro_offset[Y], gyro_offset[Z]);
@@ -108,6 +119,10 @@ void Real_Angles() {
     mpu_gyro[X] -= (int)gyro_offset[X];
     mpu_gyro[Y] -= (int)gyro_offset[Y];
     mpu_gyro[Z] -= (int)gyro_offset[Z];
+    // 加速度のキャリブレーションによる補正
+    // mpu_accel[X] -= (int)accel_offset[X];
+    // mpu_accel[Y] -= (int)accel_offset[Y];
+    // mpu_accel[Z] -= (int)accel_offset[Z];
 
     // 角速度での角度計算
     angle_gyro[X] += (-(float)mpu_gyro[X] / (MPU6050_FREQ * GYRO_LSB));
@@ -143,36 +158,6 @@ void Real_Angles() {
 }
 
 /*******************
- MinMaxの算出
-*******************/
-float MinMax(float value, float min_value, float max_value) {
-    if (value > max_value) {
-        value = max_value;
-    }else if (value < min_value) {
-        value = min_value;
-    }
-    return value;
-}
-
-/*******************
- 目標値の設定(差分計算)
-*******************/
-float Diff_Value(float angle, float pulse) {
-    float set_point = 0;
-    angle = MinMax(angle, DIFF_ANGLE_MIN, DIFF_ANGLE_MAX) * DIFF_ANGLE_COEFFICIENT;
-    
-    if (pulse > 1508) {
-        set_point = pulse - 1508;
-    }else if (pulse < 1492) {
-        set_point = 1492 - pulse;
-    }
-    set_point -= angle;
-    set_point /= 3;
-
-    return set_point;
-}
-
-/*******************
  目標値の設定
 *******************/
 void Target_Set() {
@@ -187,10 +172,42 @@ void Target_Set() {
 }
 
 /*******************
- 誤差算出
+ 目標値の設定(差分計算)
+*******************/
+float Diff_Value(float angle, float pulse) {
+    float set_point = 0;
+    angle = MinMax(angle, DIFF_ANGLE_MIN, DIFF_ANGLE_MAX) * DIFF_ANGLE_COEFFICIENT;
+    
+    if (pulse > 1508) {
+        set_point = pulse - 1508;
+    }else if (pulse < 1492) {
+        set_point = pulse - 1492;
+    }
+    set_point -= angle;
+    set_point /= 3;
+
+    return set_point;
+}
+
+/*******************
+ MinMaxの算出
+*******************/
+float MinMax(float value, float min_value, float max_value) {
+    if (value > max_value) {
+        value = max_value;
+    }else if (value < min_value) {
+        value = min_value;
+    }
+    return value;
+}
+
+/*******************
+ 目標値との差分（エラー）算出
 *******************/
 void Error_Process() {
-    if (rc_connect_flag == false) {
+    throttle = receiver_pulse[THROTTLE];
+    if (rc_connect_flag == false || throttle <= 1300) {
+    // if (rc_connect_flag == false) {
         for (size_t i = 0; i < 4; i++) {
             errors[i] = 0;
             error_sum[i] = 0;
@@ -198,7 +215,7 @@ void Error_Process() {
             before_error[i] = 0;
         }
     }else {
-        // 測定値と目標値との誤差算出
+        // 測定値と目標値との誤差算出：比例
         errors[ROLL]  = lowpass_angle[ROLL] - target_value[ROLL];
         errors[PITCH] = lowpass_angle[PITCH] - target_value[PITCH];
         errors[YAW]   = lowpass_angle[YAW] - target_value[YAW];
@@ -208,7 +225,7 @@ void Error_Process() {
         error_sum[PITCH] += errors[PITCH];
         error_sum[YAW] += errors[YAW];
 
-        // 許容範囲の算出
+        // 誤差の合計を許容範囲内に抑える
         error_sum[ROLL] = MinMax(error_sum[ROLL], -ERROR_TOLERANCE/Ki[ROLL], ERROR_TOLERANCE/Ki[ROLL]);
         error_sum[PITCH] = MinMax(error_sum[PITCH], -ERROR_TOLERANCE/Ki[PITCH], ERROR_TOLERANCE/Ki[PITCH]);
         error_sum[YAW] = MinMax(error_sum[YAW], -ERROR_TOLERANCE/Ki[YAW], ERROR_TOLERANCE/Ki[YAW]);
@@ -252,6 +269,5 @@ void PID_Calculation() {
         pulse_length[MOTOR2] = throttle + pid[ROLL] + pid[PITCH] - pid[YAW];
         pulse_length[MOTOR3] = throttle - pid[ROLL] - pid[PITCH] - pid[YAW];
         pulse_length[MOTOR4] = throttle + pid[ROLL] - pid[PITCH] + pid[YAW];
-
     }
 }

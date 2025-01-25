@@ -55,10 +55,11 @@ extern int mpu_accel[3];
 extern int mpu_gyro[3];
 extern int16_t acceleration[3], gyro[3];
 extern float error_sum[4];
+extern float errors[4];
+extern float lowpass_angle[4];
 
 /*** PID演算関連 ***/
 extern float pulse_length[4];
-// uint32_t receiver_pulse[4] = {1500, 1500, 1500, 1500};
 
 /*** モーター出力関連 ***/
 extern uint16_t motor1_duty;
@@ -143,7 +144,7 @@ int main() {
     pio0_hw->inte0 = PIO_IRQ0_INTE_SM0_BITS;
 
     // PIO0の全smを同時スタート、PIO1のSM0をスタート
-    //pio_enable_sm_mask_in_sync(pio_0, 15);        // テスト時はコメントアウト
+    pio_enable_sm_mask_in_sync(pio_0, 15);        // テスト時はコメントアウト
     pio_sm_set_enabled(pio_1, sm_0, true);
     
     sleep_ms(1000);
@@ -159,8 +160,8 @@ int main() {
     mpu6050_init();
 
     // printf("キャリブレーション指令待機\n");
-    calibrate_flag = true;      // テスト用
-    rc_connect_flag = true;     // テスト用
+    // calibrate_flag = true;      // テスト用
+    // rc_connect_flag = true;     // テスト用
     while (calibrate_flag == false) {sleep_ms(1);}
 
     // LED高速点滅
@@ -208,11 +209,12 @@ int main() {
             // printf("%.2f, %.2f\n", angle_accel[X], angle_accel[Y]);
             // printf("%.2f, %.2f, %.2f, %.2f\n", angle_gyro[X], angle_gyro[Y], angle_accel[X], angle_accel[Y]);
             // printf("acc_total_vector : %.5f\n", acc_total_vector);
-            // printf("%.2f, %.2f, %.2f\n", lowpass_angle[ROLL], lowpass_angle[PITCH], lowpass_angle[YAW]);
             // printf("%.2f, %.2f, %.2f\n", target_value[ROLL], target_value[PITCH], target_value[YAW]);
-            // printf("%.2f, %.2f, %.2f\n", errors[ROLL], errors[PITCH], errors[YAW]);
             // printf("%.2f, %.2f, %.2f\n", error_sum[ROLL], error_sum[PITCH], error_sum[YAW]);
             // printf("%.2f, %.2f, %.2f\n", pid[ROLL], pid[PITCH], pid[YAW]);
+            // printf("%.2f, %.2f, %.2f,%.2f, %.2f, %.2f\n", lowpass_angle[ROLL], lowpass_angle[PITCH], lowpass_angle[YAW],target_value[ROLL], target_value[PITCH], target_value[YAW]);
+            // printf("%d, %d, %d,%.2f, %.2f, %.2f\n", receiver_pulse[ROLL], receiver_pulse[PITCH], receiver_pulse[YAW],target_value[ROLL], target_value[PITCH], target_value[YAW]);
+            // printf("%.2f, %.2f, %.2f,%.2f, %.2f, %.2f\n", errors[ROLL], errors[PITCH], errors[YAW], error_sum[ROLL], error_sum[PITCH], error_sum[YAW]);
             // printf("%.2f, %.2f, %.2f\n", complement_angle[ROLL], complement_angle[PITCH], complement_angle[YAW]);
             printf("%.2f, %.2f, %.2f, %.2f\n", pulse_length[MOTOR1], pulse_length[MOTOR2], pulse_length[MOTOR3], pulse_length[MOTOR4]);
             // printf("%d, %d, %d, %d\n", motor1_duty, motor2_duty, motor3_duty, motor4_duty);

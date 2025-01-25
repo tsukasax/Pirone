@@ -19,6 +19,8 @@ using namespace pico_ssd1306;
 #define ZERO_PIN 2                      // ホールセンサー（原点検出用）
 #define MODE_PIN 6                      // モード切り替え
 #define GO_PIN 7                        // 動作実行
+#define servo2_duty_ini 1520
+#define servo3_duty_ini 1500
 
 #define ZERO_EVENT GPIO_IRQ_EDGE_FALL   // ホールセンサー検出方法
 
@@ -26,8 +28,8 @@ using namespace pico_ssd1306;
 float div_value = 125;                  // クロックの分周
 uint16_t wrap_value = 20000;            // 一周期のカウント数
 
-uint16_t servo2_duty = 1500;            // PITCH 初期値0°のDuty値
-uint16_t servo3_duty = 1500;            // YAW 初期値0°のDuty値
+uint16_t servo2_duty = servo2_duty_ini; // PITCH 初期値0°のDuty値
+uint16_t servo3_duty = servo3_duty_ini; // YAW 初期値0°のDuty値
 uint16_t servo2_volume;                 // PITCH ボリューム位置
 uint16_t servo3_volume;                 // YAW ボリューム位置
 uint16_t pitch_conv_data;               // 範囲変換後サーボ移動量
@@ -37,7 +39,11 @@ uint16_t roll_volume;                   // ROLL ボリューム位置
 uint16_t before_roll_volume = 800;     // 前回のROLLボリューム位置
 uint16_t move_value;                    // ステッピングモータ移動量
 bool stepper_zero = false;
-uint16_t mode_no = 0;
+uint16_t mode_no = 1;
+uint16_t dense_vol;
+bool dense_roll_change = false;
+bool dense_pitch_change = false;
+bool dense_yaw_change = false;
 
 char str_roll[256];
 char str_pitch[256];
@@ -86,7 +92,7 @@ void stepper_zero_move(uint gpio, uint32_t events) {
     }
     // 原点復帰
     gpio_put(DIR_PIN, 1);
-    for (int i = 0; i < 222; i++) {
+    for (int i = 0; i < 213; i++) {
         gpio_put(STEP_PIN, 1);
         sleep_us(2000);
         gpio_put(STEP_PIN, 0);
@@ -103,17 +109,6 @@ void gpio_callback(uint gpio, uint32_t events) {
     stepper_zero = true;
     // コールバックの割り込みは1回のみで終了
     // gpio_set_irq_enabled(gpio, events, false);
-}
-
-/*******************
-モードチェンジ
-*******************/
-void gpio_modechange() {
-    mode_no++;
-    if (mode_no == 4) {
-        mode_no = 0;
-    }
-    sleep_ms(1000);
 }
 
 /*******************
@@ -147,52 +142,33 @@ void various_move_1() {
     stepper_move(0, 100, 500, 200);    // ロール右
     sleep_ms(1000);
     stepper_move(1, 100, 1500, 200);    // 原点
-
-    // for (int j = 0; j <3; j++) {
-        // stepper_move(0, 100, 1500, 200);    // ロール右
-        // stepper_move(1, 200, 1500, 200);    // ロール左
-        // stepper_move(0, 100, 1500, 200);    // ロール右（原点復帰）
-    // }
-    // sleep_ms(1000);
-    // for (int j = 0; j <3; j++) {
-        // stepper_move(0, 100, 1000, 200);    // ロール右
-        // stepper_move(1, 200, 1000, 200);    // ロール左
-        // stepper_move(0, 100, 1000, 200);    // ロール右（原点復帰）
-    // }
-    // sleep_ms(1000);
-    // for (int j = 0; j <3; j++) {
-        // stepper_move(0, 100, 500, 200);    // ロール右
-        // stepper_move(1, 200, 500, 200);    // ロール左
-        // stepper_move(0, 100, 500, 200);    // ロール右（原点復帰）
-    // }
-    // sleep_ms(1000);
 }
 
 /*******************
 組み合わせ動作-Mode-2
 *******************/
 void various_move_2(uint slice_num) {
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, 1500);
+    pwm_set_chan_level(slice_num, PWM_CHAN_B, servo2_duty_ini);
     sleep_ms(200);
     uint16_t growth = 3;
 
     for (int j = 1; j < 4; j++) {
-        for (int i = 1500; i <= 1800; i += growth * j) {
+        for (int i = servo2_duty_ini; i <= servo2_duty_ini + 300; i += growth * j) {
             pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
             sleep_ms(10);
         }
         sleep_ms(100);
-        for (int i = 1800; i >= 1300; i -= growth * j) {
+        for (int i = servo2_duty_ini + 300; i >= servo2_duty_ini - 200; i -= growth * j) {
             pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
             sleep_ms(10);
         }
         sleep_ms(100);
-        for (int i = 1300; i <= 1500; i += growth * j) {
+        for (int i = servo2_duty_ini - 200; i <= servo2_duty_ini; i += growth * j) {
             pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
             sleep_ms(10);
         }
         sleep_ms(200);
-        pwm_set_chan_level(slice_num, PWM_CHAN_B, 1500);
+        pwm_set_chan_level(slice_num, PWM_CHAN_B, servo2_duty_ini);
     }
 }
 
@@ -202,40 +178,192 @@ void various_move_2(uint slice_num) {
 void various_move_3(uint slice_num) {
     // Stepper、Servo原点復帰
     stepper_zero_move(ZERO_PIN, ZERO_EVENT);
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, 1500);
+    pwm_set_chan_level(slice_num, PWM_CHAN_B, servo2_duty_ini);
 
     stepper_move(1, 150, 1000, 200);    // ロール左
     stepper_move(0, 300, 1000, 200);    // ロール右
     stepper_move(1, 150, 1000, 200);    // ロール左（原点復帰）
 
-    for (int i = 1500; i <= 1800; i += 3) {
+    for (int i = servo2_duty_ini; i <= servo2_duty_ini + 200; i += 3) {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
         sleep_ms(20);
     }
     sleep_ms(100);
-    for (int i = 1800; i >= 1400; i -= 3) {
+    for (int i = servo2_duty_ini + 200; i >= servo2_duty_ini - 100; i -= 3) {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
         sleep_ms(20);
     }
     sleep_ms(100);
-    for (int i = 1400; i <= 1500; i += 3) {
+    for (int i = servo2_duty_ini - 100; i <= servo2_duty_ini; i += 3) {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
         sleep_ms(20);
     }
     sleep_ms(500);
     stepper_move(0, 100, 500, 200);    // ロール右
-    for (int i = 1500; i <= 1700; i += 4) {
+    for (int i = servo2_duty_ini; i <= servo2_duty_ini + 200; i += 4) {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
         sleep_ms(20);
     }
     sleep_ms(200);
     stepper_move(1, 100, 500, 200);    // ロール左
-    for (int i = 1700; i >= 1500; i -= 4) {
+    for (int i = servo2_duty_ini + 200; i >= servo2_duty_ini; i -= 4) {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, i);
         sleep_ms(20);
     }
+    pwm_set_chan_level(slice_num, PWM_CHAN_B, servo2_duty_ini);
     sleep_ms(200);
 
+}
+
+/*******************
+組み合わせ動作-ボリューム操作
+*******************/
+void volume_move(uint servo_2, uint servo_3, SSD1306& disp) {
+    adc_select_input(0);
+    roll_volume = adc_read();
+    roll_conv_data = Map(roll_volume, 0, 4095, 0, 1600);
+    
+    if (roll_conv_data > before_roll_volume + 20 || roll_conv_data < before_roll_volume - 20) {
+        if (roll_conv_data > before_roll_volume) {
+            gpio_put(DIR_PIN, 0);
+            move_value = roll_conv_data - before_roll_volume;
+        }else {
+            gpio_put(DIR_PIN, 1);
+            move_value = before_roll_volume - roll_conv_data;
+        }
+
+        for (int i = 0; i < move_value; i++) {
+            gpio_put(STEP_PIN, 1);
+            sleep_us(1800);
+            gpio_put(STEP_PIN, 0);
+            sleep_us(1800);
+        }
+        before_roll_volume = roll_conv_data;
+        
+        // OLEDへ表示
+        fillRect(&disp, 70, 0, 120, 19, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_roll,"%d", roll_conv_data);
+        drawText(&disp, font_12x16, str_roll, 70 ,0);
+        disp.sendBuffer();
+    }
+
+    // PITCHボリューム値検出とサーボモータ駆動
+    adc_select_input(1);
+    servo2_volume = adc_read();
+    pitch_conv_data = Map(servo2_volume, 0, 4095, 1000, 2000);
+
+    if (pitch_conv_data > servo2_duty + 20 || pitch_conv_data < servo2_duty - 20) {
+        servo_move(servo_2, PWM_CHAN_B, servo2_duty, pitch_conv_data);
+        servo2_duty = pitch_conv_data;
+
+        // OLEDへ表示
+        fillRect(&disp, 70, 20, 120, 39, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_pitch,"%d", servo2_duty);
+        drawText(&disp, font_12x16, str_pitch, 70 ,20);
+        disp.sendBuffer();
+    }
+
+    // YAWボリューム値検出とサーボモータ駆動
+    adc_select_input(2);
+    servo3_volume = adc_read();
+    yaw_conv_data = Map(servo3_volume, 0, 4095, 1000, 2000);
+
+    if (yaw_conv_data > servo3_duty + 20 || yaw_conv_data < servo3_duty - 20) {
+        servo_move(servo_3, PWM_CHAN_A, servo3_duty, yaw_conv_data);
+        servo3_duty = yaw_conv_data;
+
+        // OLEDへ表示
+        fillRect(&disp, 70, 40, 120, 59, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_yaw,"%d", servo3_duty);
+        drawText(&disp, font_12x16, str_yaw, 70 ,40);
+        disp.sendBuffer();
+    }
+    sleep_ms(20);
+}
+
+/*******************
+組み合わせ動作-ボリューム操作（微小操作）
+*******************/
+void volume_move_dense(uint servo_2, uint servo_3, SSD1306& disp) {
+    adc_select_input(0);
+    roll_volume = adc_read();
+    roll_conv_data = Map(roll_volume, 0, 4095, 0, 100);
+    
+    if (roll_conv_data >= 60 && roll_conv_data <= 70) {
+        gpio_put(DIR_PIN, 0);
+        move_value = 1;
+        dense_vol += 1;
+        dense_roll_change = true;
+    }else if (roll_conv_data >= 30 && roll_conv_data <= 40) {
+        gpio_put(DIR_PIN, 1);
+        move_value = 1;
+        dense_vol -= 1;
+        dense_roll_change = true;
+    }
+    
+    if (dense_roll_change) {
+        for (int i = 0; i < move_value; i++) {
+            gpio_put(STEP_PIN, 1);
+            sleep_us(1800);
+            gpio_put(STEP_PIN, 0);
+            sleep_us(1800);
+        }
+        // OLEDへ表示
+        fillRect(&disp, 70, 0, 120, 19, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_roll,"%d", dense_vol);
+        drawText(&disp, font_12x16, str_roll, 70 ,0);
+        disp.sendBuffer();
+        dense_roll_change = false;
+        sleep_ms(300);
+    }
+        
+    // PITCHボリューム値検出とサーボモータ駆動
+    adc_select_input(1);
+    servo2_volume = adc_read();
+    pitch_conv_data = Map(servo2_volume, 0, 4095, 0, 100);
+
+    if (pitch_conv_data >= 60 && pitch_conv_data <= 70) {
+        servo_move(servo_2, PWM_CHAN_B, servo2_duty, servo2_duty + 2);
+        servo2_duty += 2;
+        dense_pitch_change = true;
+    }else if (pitch_conv_data >= 30 && pitch_conv_data <= 40) {
+        servo_move(servo_2, PWM_CHAN_B, servo2_duty, servo2_duty - 2);
+        servo2_duty -= 2;
+        dense_pitch_change = true;
+    }
+
+    if (dense_pitch_change) {
+        // OLEDへ表示
+        fillRect(&disp, 70, 20, 120, 39, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_pitch,"%d", servo2_duty);
+        drawText(&disp, font_12x16, str_pitch, 70 ,20);
+        disp.sendBuffer();
+        dense_pitch_change = false;
+        sleep_ms(300);
+    }
+
+    // YAWボリューム値検出とサーボモータ駆動
+    adc_select_input(2);
+    servo3_volume = adc_read();
+    yaw_conv_data = Map(servo3_volume, 0, 4095, 1000, 2000);
+
+    if (yaw_conv_data > servo3_duty + 20 || yaw_conv_data < servo3_duty - 20) {
+        servo_move(servo_3, PWM_CHAN_A, servo3_duty, yaw_conv_data);
+        servo3_duty = yaw_conv_data;
+
+        // OLEDへ表示
+        fillRect(&disp, 70, 40, 120, 59, WriteMode::SUBTRACT);
+        disp.sendBuffer();
+        sprintf(str_yaw,"%d", servo3_duty);
+        drawText(&disp, font_12x16, str_yaw, 70 ,40);
+        disp.sendBuffer();
+    }
+    sleep_ms(20);
 }
 
 
@@ -312,36 +440,66 @@ int main() {
     stepper_zero_move(ZERO_PIN, ZERO_EVENT);
     
     // 初回OLED表示
+    sprintf(str_pitch,"%d", servo2_duty);
     display.clear();
     display.sendBuffer();
     drawText(&display, font_8x8, "ROLL  :", 0 ,0);
     drawText(&display, font_8x8, "PITCH :", 0 ,20);
     drawText(&display, font_8x8, "YAW   :", 0 ,40);
     drawText(&display, font_12x16, "800", 70 ,0);
-    drawText(&display, font_12x16, "1500", 70 ,20);
+    drawText(&display, font_12x16, str_pitch, 70 ,20);
     drawText(&display, font_12x16, "1500", 70 ,40);
     display.sendBuffer();
 
     
     while (true) {
         if (!gpio_get(MODE_PIN)){
+            if (mode_no == 5) mode_no = 0;
             mode_no++;
-            if (mode_no == 4) {
-                mode_no = 0;
-                display.clear();
-                display.sendBuffer();
-                drawText(&display, font_8x8, "ROLL  :", 0 ,0);
-                drawText(&display, font_8x8, "PITCH :", 0 ,20);
-                drawText(&display, font_8x8, "YAW   :", 0 ,40);
-                drawText(&display, font_12x16, "800", 70 ,0);
-                drawText(&display, font_12x16, "1500", 70 ,20);
-                drawText(&display, font_12x16, "1500", 70 ,40);
-                display.sendBuffer();
-                sleep_ms(1000);
-            }
 
             switch (mode_no) {
                 case 1:
+                    sprintf(str_roll,"%d", dense_vol);
+                    sprintf(str_pitch,"%d", servo2_duty);
+                    sprintf(str_yaw,"%d", servo3_duty);
+                    display.clear();
+                    display.sendBuffer();
+                    drawText(&display, font_8x8, "ROLL  :", 0 ,0);
+                    drawText(&display, font_8x8, "PITCH :", 0 ,20);
+                    drawText(&display, font_8x8, "YAW   :", 0 ,40);
+                    drawText(&display, font_12x16, str_roll, 70 ,0);
+                    drawText(&display, font_12x16, str_pitch, 70 ,20);
+                    drawText(&display, font_12x16, str_yaw, 70 ,40);
+                    display.sendBuffer();
+                    sleep_ms(100);
+                    break;
+                case 2:
+                    // display.clear();
+                    // display.sendBuffer();
+                    // drawText(&display, font_12x16, " Return!!", 0 ,5);
+                    // display.sendBuffer();
+                    // stepper_zero_move(ZERO_PIN, ZERO_EVENT);
+                    // pwm_set_chan_level(servo2_slice_num, PWM_CHAN_B, servo2_duty_ini);
+                    // pwm_set_chan_level(servo3_slice_num, PWM_CHAN_A, servo3_duty_ini);
+                    // dense_vol = 800;
+                    // sleep_ms(10);
+                    dense_vol = roll_conv_data;
+                    display.clear();
+                    display.sendBuffer();
+                    drawText(&display, font_8x8, "ROLL  :", 0 ,0);
+                    drawText(&display, font_8x8, "PITCH :", 0 ,20);
+                    drawText(&display, font_8x8, "YAW   :", 0 ,40);
+                    drawText(&display, font_8x8, "Dense", 0 ,50);
+                    sprintf(str_roll,"%d", dense_vol);
+                    sprintf(str_pitch,"%d", servo2_duty);
+                    sprintf(str_yaw,"%d", servo3_duty);
+                    drawText(&display, font_12x16, str_roll, 70 ,0);
+                    drawText(&display, font_12x16, str_pitch, 70 ,20);
+                    drawText(&display, font_12x16, str_yaw, 70 ,40);
+                    display.sendBuffer();
+                    sleep_ms(100);
+                    break;
+                case 3:
                     display.clear();
                     display.sendBuffer();
                     drawRect(&display, 16, 0, 104, 24);
@@ -349,7 +507,7 @@ int main() {
                     drawText(&display, font_12x16, "ROLL", 0 ,40);
                     display.sendBuffer();
                     break;
-                case 2:
+                case 4:
                     display.clear();
                     display.sendBuffer();
                     drawRect(&display, 16, 0, 104, 24);
@@ -357,7 +515,7 @@ int main() {
                     drawText(&display, font_12x16, "PITCH", 0 ,40);
                     display.sendBuffer();
                     break;
-                case 3:
+                case 5:
                     display.clear();
                     display.sendBuffer();
                     drawRect(&display, 16, 0, 104, 24);
@@ -365,22 +523,27 @@ int main() {
                     drawText(&display, font_12x16, "ROLL-PITCH", 0 ,40);
                     display.sendBuffer();
                     break;
+                
                 default:
                     break;
             }
-            sleep_ms(1000);
+            sleep_ms(500);
         }
 
-        if (mode_no != 0) {
+        if (mode_no == 1) {
+            volume_move(servo2_slice_num, servo3_slice_num, display);
+        }else if (mode_no == 2) {
+            volume_move_dense(servo2_slice_num, servo3_slice_num, display);
+        }else {
             if (!gpio_get(GO_PIN)) {
                 switch (mode_no) {
-                    case 1:
+                    case 3:
                         various_move_1();
                         break;
-                    case 2:
+                    case 4:
                         various_move_2(servo2_slice_num);
                         break;
-                    case 3:
+                    case 5:
                         various_move_3(servo2_slice_num);
                         break;
                     default:
@@ -388,75 +551,6 @@ int main() {
                 }
             }
             sleep_ms(1);
-        }else {
-            // ROLLボリューム値検出とステッピングモータ駆動
-            adc_select_input(0);
-            roll_volume = adc_read();
-            roll_conv_data = Map(roll_volume, 0, 4095, 0, 1600);
-            // printf("volume : %d, conv : %d\n", roll_volume, roll_conv_data);
-            
-            if (roll_conv_data > before_roll_volume + 20 || roll_conv_data < before_roll_volume - 20) {
-                if (roll_conv_data > before_roll_volume) {
-                    gpio_put(DIR_PIN, 0);
-                    move_value = roll_conv_data - before_roll_volume;
-                }else {
-                    gpio_put(DIR_PIN, 1);
-                    move_value = before_roll_volume - roll_conv_data;
-                }
-
-                for (int i = 0; i < move_value; i++) {
-                    gpio_put(STEP_PIN, 1);
-                    sleep_us(1800);
-                    gpio_put(STEP_PIN, 0);
-                    sleep_us(1800);
-                }
-                before_roll_volume = roll_conv_data;
-                
-                // OLEDへ表示
-                fillRect(&display, 70, 0, 120, 19, WriteMode::SUBTRACT);
-                display.sendBuffer();
-                sprintf(str_roll,"%d", roll_conv_data);
-                drawText(&display, font_12x16, str_roll, 70 ,0);
-                display.sendBuffer();
-            }
-
-            // PITCHボリューム値検出とサーボモータ駆動
-            adc_select_input(1);
-            servo2_volume = adc_read();
-            pitch_conv_data = Map(servo2_volume, 0, 4095, 1000, 2000);
-            // printf("volume : %d, conv : %d\n", servo2_volume, pitch_conv_data);
-
-            if (pitch_conv_data > servo2_duty + 20 || pitch_conv_data < servo2_duty - 20) {
-                servo_move(servo2_slice_num, PWM_CHAN_B, servo2_duty, pitch_conv_data);
-                // printf("PITCH: Volume = %d, Duty = %d\n", conv_data, servo2_duty);
-                servo2_duty = pitch_conv_data;
-
-                // OLEDへ表示
-                fillRect(&display, 70, 20, 120, 39, WriteMode::SUBTRACT);
-                display.sendBuffer();
-                sprintf(str_pitch,"%d", servo2_duty);
-                drawText(&display, font_12x16, str_pitch, 70 ,20);
-                display.sendBuffer();
-            }
-
-            // YAWボリューム値検出とサーボモータ駆動
-            adc_select_input(2);
-            servo3_volume = adc_read();
-            yaw_conv_data = Map(servo3_volume, 0, 4095, 1000, 2000);
-
-            if (yaw_conv_data > servo3_duty + 20 || yaw_conv_data < servo3_duty - 20) {
-                servo_move(servo3_slice_num, PWM_CHAN_A, servo3_duty, yaw_conv_data);
-                // printf("YAW: Volume = %d, Duty = %d\n", conv_data, servo3_duty);
-                servo3_duty = yaw_conv_data;
-
-                // OLEDへ表示
-                fillRect(&display, 70, 40, 120, 59, WriteMode::SUBTRACT);
-                display.sendBuffer();
-                sprintf(str_yaw,"%d", servo3_duty);
-                drawText(&display, font_12x16, str_yaw, 70 ,40);
-                display.sendBuffer();
-            }
-            sleep_ms(20);
         }
     }
 }

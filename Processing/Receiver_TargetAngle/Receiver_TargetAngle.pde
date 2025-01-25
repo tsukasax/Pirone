@@ -1,7 +1,7 @@
 import processing.serial.*;
 
 // シリアル通信用変数定義
-float ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw;
+float receiver_roll, receiver_pitch, receiver_yaw, target_roll, target_pitch, target_yaw;
 
 // 画面描画用変数定義
 PFont myFont_1, myFont_2, myFont_3, myFont_4;
@@ -9,6 +9,7 @@ int y_text_posi = -350;
 int x_text_posi = 0;
 int offset = 0;
 int y_offset = 0;
+float offsetY = 0;
 float maxRange = 0;
 String text_title;
 String text_team_name = "Pirone Teams.";
@@ -26,8 +27,8 @@ int FRATE = 50;
 
 // クラスのインスタンス
 Serial myPort;
-graphMonitor Accel_Graph;
-graphMonitor Gyro_Graph;
+graphMonitor Receiver_Graph;
+graphMonitor Target_Graph;
 
 
 void setup() {
@@ -36,8 +37,8 @@ void setup() {
   smooth(4);
   
   myPort = new Serial(this, com_port, baudrate);
-  Accel_Graph = new graphMonitor(100, 50, 1000, 300);
-  Gyro_Graph = new graphMonitor(100, 450, 1000, 300);
+  Receiver_Graph = new graphMonitor(100, 50, 1000, 300);
+  Target_Graph = new graphMonitor(100, 450, 1000, 300);
   
   myFont_1 = createFont(Font_Name_1, 30);
   myFont_2 = createFont(Font_Name_2, 30);
@@ -50,8 +51,8 @@ void setup() {
 void draw() {
   background(#015F0D);
   
-  Accel_Graph.graphDraw(ax_raw, ay_raw, az_raw, "accel");
-  Gyro_Graph.graphDraw(gx_raw, gy_raw, gz_raw, "gyro");
+  Receiver_Graph.graphDraw(receiver_roll, receiver_pitch, receiver_yaw, "receiver");
+  Target_Graph.graphDraw(target_roll, target_pitch, target_yaw, "target");
 }
 
 class graphMonitor {
@@ -87,27 +88,29 @@ class graphMonitor {
       pushMatrix();
       
       // グラフ種別による各変数の設定
-      if (graph_name == "accel") {
-        text_title = "Acceleration(加速度)信号";
-        maxRange = 10000;
-        value_1 = ax_raw;
-        value_2 = ay_raw;
-        value_3 = az_raw;
-        name_1 = "ax";
-        name_2 = "ay";
-        name_3 = "az";
+      if (graph_name == "receiver") {
+        text_title = "Receiverからの受信値";
+        maxRange = 1200;
+        value_1 = receiver_roll;
+        value_2 = receiver_pitch;
+        value_3 = receiver_yaw;
+        name_1 = "roll";
+        name_2 = "pitch";
+        name_3 = "yaw";
+        offsetY = 900;
         x_text_posi = 1200;
         offset = -10;
-        y_offset = 75;
+        y_offset = 225;
       }else{
-        text_title = "Gyro(角速度)信号";
-        maxRange = 100;
-        value_1 = gx_raw;
-        value_2 = gy_raw;
-        value_3 = gz_raw;
-        name_1 = "gx";
-        name_2 = "gy";
-        name_3 = "gz";
+        text_title = "移動目標値";
+        maxRange = 500;
+        value_1 = target_roll;
+        value_2 = target_pitch;
+        value_3 = target_yaw;
+        name_1 = "roll";
+        name_2 = "pitch";
+        name_3 = "yaw";
+        offsetY = 0;
         x_text_posi = 1180;
         offset  = 10;
         y_offset = 75;
@@ -134,7 +137,7 @@ class graphMonitor {
       text(text_title, 20, -5);
       
       // チーム名表示
-      if (graph_name == "accel") {
+      if (graph_name == "receiver") {
         textFont(myFont_2);
         textSize(20);
         text(text_team_name,1050,-5);
@@ -144,14 +147,22 @@ class graphMonitor {
       textFont(myFont_3);
       textSize(24);
       textAlign(RIGHT);
-      text(nf(0, 0, 0), -5, Y_LENGTH / 2);
-      text(nf((maxRange / 2), 0, 0), -5, 18);
-      text(nf((-maxRange / 2), 0, 0), -5, Y_LENGTH); 
-      text(nf((-maxRange / 4), 0, 0), -5, Y_LENGTH * 3 / 4);
-      text(nf((maxRange / 4), 0, 0), -5, Y_LENGTH / 4);
+      if (graph_name == "target") {
+        text(nf(0, 0, 0), -5, Y_LENGTH / 2);
+        text(nf((maxRange / 2), 0, 0), -5, 18);
+        text(nf((-maxRange / 2), 0, 0), -5, Y_LENGTH); 
+        text(nf((-maxRange / 4), 0, 0), -5, Y_LENGTH * 3 / 4);
+        text(nf((maxRange / 4), 0, 0), -5, Y_LENGTH / 4);
+      }else {
+        text(nf((maxRange / 2 + offsetY), 0, 0), -5, Y_LENGTH / 2);
+        text(nf((maxRange + offsetY), 0, 0), -5, 18);
+        text(int(offsetY), -5, Y_LENGTH); 
+        text(nf((maxRange / 4 + offsetY), 0, 0), -5, Y_LENGTH * 3 / 4);
+        text(nf((maxRange * 3 / 4 + offsetY), 0, 0), -5, Y_LENGTH / 4);
+      }
 
       // X軸目盛値その他表示
-      if (graph_name == "gyro") {
+      if (graph_name == "target") {
         textFont(myFont_3);
         textSize(18);
         textAlign(LEFT);
@@ -166,16 +177,32 @@ class graphMonitor {
       strokeWeight(2);
       
       for (int i = 0; i < X_LENGTH - 1; i++) {
-        // ax_raw,gx_rawのライン
-        stroke(255, 255, 0);
-        line(i, (y11[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y11[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
-        // ay_raw,gy_rawのライン
-        stroke(255, 0, 255);
-        line(i, (y12[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y12[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
-        // az_raw,gz_rawのライン
-        stroke(255, 255, 255);
-        line(i, (y13[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y13[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
-      }
+        if (graph_name == "target") {
+          //translate(0, Y_LENGTH / 4);
+          // target_rollのライン
+          stroke(255, 255, 0);
+          line(i, (y11[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y11[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
+          // target_pitchのライン
+          stroke(255, 0, 255);
+          line(i, (y12[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y12[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
+          // target_yawのライン
+          stroke(255, 255, 255);
+          line(i, (y13[i] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset, i + 1, (y13[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH / maxRange) - y_offset);
+         }else {
+           if (y11[i] >= 900) {
+            // receiver_rollのライン
+            stroke(255, 255, 0);
+            line(i, (y11[i] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset, i + 1, (y11[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset);
+            // receiver_pitchのライン
+            stroke(255, 0, 255);
+            line(i, (y12[i] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset, i + 1, (y12[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset);
+            // receiver_yawのライン
+            stroke(255, 255, 255);
+            line(i, (y13[i] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset, i + 1, (y13[i + 1] * Y_LENGTH / maxRange) - (Y_LENGTH * offsetY / maxRange) - y_offset);
+           }
+         }
+       }
+      
       
       // 各数値の表示枠描画
       scale(1, -1);
@@ -210,7 +237,6 @@ class graphMonitor {
     }
 }
 
-
 // ******************
 // シリアル通信待機
 // ******************
@@ -222,11 +248,11 @@ void serialEvent(Serial myPort) {
   if (str_data != null){
     str_data = trim(str_data);
     temp = split(str_data,",");
-    ax_raw = float(temp[0]);
-    ay_raw = float(temp[1]);
-    az_raw = float(temp[2]);
-    gx_raw = float(temp[3]);
-    gy_raw = float(temp[4]);
-    gz_raw = float(temp[5]);
+    receiver_roll = float(temp[0]);
+    receiver_pitch = float(temp[1]);
+    receiver_yaw = float(temp[2]);
+    target_roll = float(temp[3]);
+    target_pitch = float(temp[4]);
+    target_yaw = float(temp[5]);
   }
 }
