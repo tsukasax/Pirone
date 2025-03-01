@@ -216,8 +216,8 @@ int main() {
             // printf("%d, %d, %d,%.2f, %.2f, %.2f\n", receiver_pulse[ROLL], receiver_pulse[PITCH], receiver_pulse[YAW],target_value[ROLL], target_value[PITCH], target_value[YAW]);
             // printf("%.2f, %.2f, %.2f,%.2f, %.2f, %.2f\n", errors[ROLL], errors[PITCH], errors[YAW], error_sum[ROLL], error_sum[PITCH], error_sum[YAW]);
             // printf("%.2f, %.2f, %.2f\n", complement_angle[ROLL], complement_angle[PITCH], complement_angle[YAW]);
-            printf("%.2f, %.2f, %.2f, %.2f\n", pulse_length[MOTOR1], pulse_length[MOTOR2], pulse_length[MOTOR3], pulse_length[MOTOR4]);
-            // printf("%d, %d, %d, %d\n", motor1_duty, motor2_duty, motor3_duty, motor4_duty);
+            // printf("%.2f, %.2f, %.2f, %.2f\n", pulse_length[MOTOR1], pulse_length[MOTOR2], pulse_length[MOTOR3], pulse_length[MOTOR4]);
+            //printf("%d, %d, %d, %d\n", motor1_duty, motor2_duty, motor3_duty, motor4_duty);
             // printf("%d\n", t_time);
             tim30ms = false;
         }

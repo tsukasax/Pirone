@@ -1,11 +1,17 @@
 #include "mpu6050.h"
 
+// PID係数
+float Kp[4] = {1.5, 1.5, 0, 1.5};
+float Ki[4] = {0.02, 0.02, 0, 0};
+float Kd[4] = {10, 10, 0, 0};
+float offset_motor1 = 0;
+float offset_motor2 = 0;
+float offset_motor3 = 0;
+float offset_motor4 = 0;
+
 float angle_gyro[3] = {0, 0, 0};
 float angle_accel[3] = {0, 0, 0};
 float target_value[4] = {0, 0, 0, 0};
-float Kp[4] = {1.3, 1.3, 0, 4.0};
-float Ki[4] = {0.02, 0.02, 0, 0.02};
-float Kd[4] = {18, 18, 0, 0};
 float pid[4] = {0, 0, 0, 0};
 float throttle = 0;
 float errors[4] = {0, 0, 0, 0};
@@ -22,6 +28,7 @@ int mpu_accel_sum[3] = {0, 0, 0,};
 int mpu_gyro_sum[3] = {0, 0, 0};
 float pulse_length[4] = {0, 0, 0, 0};
 int16_t acceleration[3], gyro[3];
+
 
 /*******************
 MPU6050の初期化
@@ -80,29 +87,17 @@ void mpu6050_calibrate() {
     gyro_offset[X] = 0;
     gyro_offset[Y] = 0;
     gyro_offset[Z] = 0;
-    // accel_offset[X] = 0;
-    // accel_offset[Y] = 0;
-    // accel_offset[Z] = 0;
 
     for (int i = 0; i < CALIBRATION_SAMPLE; i++) {
         mpu6050_read_raw(acceleration, gyro);
-        
         gyro_offset[X] += gyro[X];
         gyro_offset[Y] += gyro[Y];
         gyro_offset[Z] += gyro[Z];
-        // accel_offset[X] += acceleration[X];
-        // accel_offset[Y] += acceleration[Y];
-        // accel_offset[Z] += acceleration[Z];
-
         sleep_ms(3);
     }
     gyro_offset[X] /= CALIBRATION_SAMPLE;
     gyro_offset[Y] /= CALIBRATION_SAMPLE;
     gyro_offset[Z] /= CALIBRATION_SAMPLE;
-    // accel_offset[X] /= CALIBRATION_SAMPLE;
-    // accel_offset[Y] /= CALIBRATION_SAMPLE;
-    // accel_offset[Z] /= CALIBRATION_SAMPLE;
-    // accel_offset[Z] -= 4096;
 
     // printf("MPU6050キャリブレーション 終了\n\n");
     // printf("X: %d, Y: %d, Z: %d\n", gyro_offset[X], gyro_offset[Y], gyro_offset[Z]);
@@ -119,10 +114,6 @@ void Real_Angles() {
     mpu_gyro[X] -= (int)gyro_offset[X];
     mpu_gyro[Y] -= (int)gyro_offset[Y];
     mpu_gyro[Z] -= (int)gyro_offset[Z];
-    // 加速度のキャリブレーションによる補正
-    // mpu_accel[X] -= (int)accel_offset[X];
-    // mpu_accel[Y] -= (int)accel_offset[Y];
-    // mpu_accel[Z] -= (int)accel_offset[Z];
 
     // 角速度での角度計算
     angle_gyro[X] += (-(float)mpu_gyro[X] / (MPU6050_FREQ * GYRO_LSB));
@@ -206,8 +197,7 @@ float MinMax(float value, float min_value, float max_value) {
 *******************/
 void Error_Process() {
     throttle = receiver_pulse[THROTTLE];
-    if (rc_connect_flag == false || throttle <= 1300) {
-    // if (rc_connect_flag == false) {
+    if (rc_connect_flag == false || throttle <= 1100) {
         for (size_t i = 0; i < 4; i++) {
             errors[i] = 0;
             error_sum[i] = 0;
@@ -265,9 +255,10 @@ void PID_Calculation() {
         pid[YAW]   = MinMax(pid[YAW], -PID_TOLERANCE, PID_TOLERANCE);         // 時計回りで＋、反時計回りで-
 
         // モータ出力の演算
-        pulse_length[MOTOR1] = throttle - pid[ROLL] + pid[PITCH] + pid[YAW];
-        pulse_length[MOTOR2] = throttle + pid[ROLL] + pid[PITCH] - pid[YAW];
-        pulse_length[MOTOR3] = throttle - pid[ROLL] - pid[PITCH] - pid[YAW];
-        pulse_length[MOTOR4] = throttle + pid[ROLL] - pid[PITCH] + pid[YAW];
+        pulse_length[MOTOR1] = throttle - pid[ROLL] + pid[PITCH] - pid[YAW] + offset_motor1;
+        pulse_length[MOTOR2] = throttle + pid[ROLL] + pid[PITCH] + pid[YAW] + offset_motor2;
+        pulse_length[MOTOR3] = throttle - pid[ROLL] - pid[PITCH] + pid[YAW] + offset_motor3;
+        pulse_length[MOTOR4] = throttle + pid[ROLL] - pid[PITCH] - pid[YAW] + offset_motor4;
     }
 }
+ 
