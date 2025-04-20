@@ -1,0 +1,51 @@
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>PicoWテスト動作</title>
+    <style type="text/css">
+        .width {width:59px; text-align:center;}
+        p#font {padding:20px; background-color: rgb(255, 255, 255);}
+        p#font red {color: red;}
+    </style>
+</head>
+<body>
+    <h1>PicoW Webテスト画面（日本語）</h1>
+    <table>
+        <tr><td>
+            <p><img src="/img/dog.png" width="100"></p>
+        </td><td>
+            <p id="font"><red><!--#message--></red></p>
+        </td></tr>
+    </table>
+    <br>
+    <h1>PID設定変更画面</h1>
+    <form action="/pid" method="post">
+        <table border="1" style="border-collapse:collapse; text-align:center;">
+            <tr>
+                <th width="100">KP</th>
+                <th width="100">KI</th>
+                <th width="100">KD</th>
+            </tr>
+            <tr>
+                <td><input class="width" type="text" name="kp" value="<!--#kp-->"/></td>
+                <td><input class="width" type="text" name="ki" value="<!--#ki-->"/></td>
+                <td><input class="width" type="text" name="kd" value="<!--#kd-->"/></td>
+            </tr>
+            <tr>
+                <td colspan="3"><input type="submit" value="PID係数変更"></td>
+            </tr>
+        </table>
+    </form>
+    <br>
+    <br>
+    <table>
+        <tr>
+            <td><form action="/read" method="post"><input type="submit" value="フラッシュメモリから読み込み"></form></td>
+            <td><form action="/write" method="post"><input type="submit" value="フラッシュメモリへ書き込み"></form></td>            
+        </tr>
+    </table>
+    <br>
+    <br>
+    <a href="/index.shtml">更新</a>
+</body>
+</html>
