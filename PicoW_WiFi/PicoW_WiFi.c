@@ -210,8 +210,6 @@ err_t httpd_post_receive_data(void *connection, struct pbuf *p) {
         ret = ERR_OK;
     }else if (current_connection == connection && task_mode == 2) {
         for (i = 0; i < 3; i++) {
-            sprintf(str, "%s=", ssi_tags[i]);
-            val = httpd_param_value(p, str, buf, sizeof(buf));
             printf("%s : %.2f --> %.2f\n", ssi_tags[i], kpid[i], (float)read_data[i] / 100);
             kpid[i] = (float)read_data[i] / 100;
         }
@@ -307,6 +305,7 @@ int main()
     struct repeating_timer timer;
     // タイマー割り込み(1ms)
     add_repeating_timer_ms(-1000, repeating_timer_callback, NULL, &timer);
+    timer_count = time_us_32();
 
     while (true) {
         tight_loop_contents();
