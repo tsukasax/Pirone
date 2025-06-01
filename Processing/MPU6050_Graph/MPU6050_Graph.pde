@@ -20,7 +20,7 @@ String Font_Name_1 = "ＭＳ Ｐゴシック";
 String Font_Name_2 = "Meiryo UI Bold Italic";
 String Font_Name_3 = "HGP創英角ｺﾞｼｯｸUB";
 String Font_Name_4 = "Yu Gothic UI Bold";
-String com_port = "COM6";
+String com_port = "COM5";
 int baudrate = 115200;
 int FRATE = 50;
 
@@ -89,7 +89,7 @@ class graphMonitor {
       // グラフ種別による各変数の設定
       if (graph_name == "accel") {
         text_title = "Acceleration(加速度)信号";
-        maxRange = 10000;
+        maxRange = 3;
         value_1 = ax_raw;
         value_2 = ay_raw;
         value_3 = az_raw;
@@ -97,11 +97,11 @@ class graphMonitor {
         name_2 = "ay";
         name_3 = "az";
         x_text_posi = 1200;
-        offset = -10;
-        y_offset = 75;
+        offset = 0;
+        y_offset = -24;
       }else{
         text_title = "Gyro(角速度)信号";
-        maxRange = 100;
+        maxRange = 1000;
         value_1 = gx_raw;
         value_2 = gy_raw;
         value_3 = gz_raw;

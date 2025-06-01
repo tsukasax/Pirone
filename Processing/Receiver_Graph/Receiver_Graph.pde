@@ -16,7 +16,7 @@ String Font_Name_1 = "ＭＳ Ｐゴシック";
 String Font_Name_2 = "Meiryo UI Bold Italic";
 String Font_Name_3 = "HGP創英角ｺﾞｼｯｸUB";
 String Font_Name_4 = "Yu Gothic UI Bold";
-String com_port = "COM6";
+String com_port = "COM5";
 int baudrate = 115200;
 int FRATE = 50;
 
