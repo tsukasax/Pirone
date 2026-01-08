@@ -1,0 +1,69 @@
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>PicoWテスト動作</title>
+    <style type="text/css">
+        .width {width:59px; text-align:center;}
+        p#font {padding:20px; background-color: rgb(255, 255, 255);}
+        p#font red {color: red;}
+    </style>
+</head>
+<body>
+    <h1>PicoW Webテスト画面（日本語）</h1>
+    <table>
+        <tr><td>
+            <p><img src="/img/dog.png" width="100"></p>
+        </td><td>
+            <p id="font"><red><!--#message--></red></p>
+        </td></tr>
+    </table>
+    <br>
+    <h1>PID設定変更画面</h1>
+    <form action="/pid" method="post">
+        <table border="1" style="border-collapse:collapse; text-align:center;">
+            <tr>
+                <th width="100">PID</th>
+                <th width="100">roll</th>
+                <th width="100">pitch</th>
+                <th width="100">throttle</th>
+                <th width="100">yaw</th>
+            </tr>
+            <tr>
+                <td>Kp</td>
+                <td><input class="width" type="text" name="kp_roll" value="<!--#kp_roll-->"/></td>
+                <td><input class="width" type="text" name="kp_pitch" value="<!--#kp_pitch-->"/></td>
+                <td><input class="width" type="text" name="kp_throt" value="<!--#kp_throt-->"/></td>
+                <td><input class="width" type="text" name="kp_yaw" value="<!--#kp_yaw-->"/></td>
+            </tr>
+            <tr>
+                <td>Ki</td>
+                <td><input class="width" type="text" name="ki_roll" value="<!--#ki_roll-->"/></td>
+                <td><input class="width" type="text" name="ki_pitch" value="<!--#ki_pitch-->"/></td>
+                <td><input class="width" type="text" name="ki_throt" value="<!--#ki_throt-->"/></td>
+                <td><input class="width" type="text" name="ki_yaw" value="<!--#ki_yaw-->"/></td>
+            </tr>
+            <tr>
+                <td>Kd</td>
+                <td><input class="width" type="text" name="kd_roll" value="<!--#kd_roll-->"/></td>
+                <td><input class="width" type="text" name="kd_pitch" value="<!--#kd_pitch-->"/></td>
+                <td><input class="width" type="text" name="kd_throt" value="<!--#kd_throt-->"/></td>
+                <td><input class="width" type="text" name="kd_yaw" value="<!--#kd_yaw-->"/></td>
+            </tr>
+            <tr>
+                <td colspan="5"><input type="submit" value="PID係数変更"></td>
+            </tr>
+        </table>
+    </form>
+    <br>
+    <br>
+    <table>
+        <tr>
+            <td><form action="/read" method="post"><input type="submit" value="フラッシュメモリから読み込み"></form></td>
+            <td><form action="/write" method="post"><input type="submit" value="フラッシュメモリへ書き込み"></form></td>            
+        </tr>
+    </table>
+    <br>
+    <br>
+    <a href="/index.shtml">更新</a>
+</body>
+</html>

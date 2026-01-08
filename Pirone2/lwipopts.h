@@ -86,4 +86,13 @@
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
+// 追加
+#define LWIP_HTTPD 1
+#define LWIP_HTTPD_SSI 1
+#define LWIP_HTTPD_SSI_INCLUDE_TAG 0
+#define LWIP_HTTPD_SUPPORT_POST 1
+
+// Generated file containing html data
+#define HTTPD_FSDATA_FILE "pico_fsdata.inc"
+
 #endif /* __LWIPOPTS_H__ */
